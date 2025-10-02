@@ -42,19 +42,117 @@ const STATIC_MAP_ZOOM = '16';
 
 const app = new Hono<{ Bindings: Env }>();
 
+type CacheLike = Pick<KVNamespace, 'get' | 'put' | 'delete'>;
+
+const inMemoryCache = createInMemoryCache();
+
+const MOCK_PLACE_TEMPLATES = [
+  {
+    id: 'mock-1',
+    name: 'ごはん処 和み',
+    baseDistanceMeters: 180,
+    bearingDegrees: 20,
+    rating: 4.2,
+    priceLevel: 'PRICE_LEVEL_INEXPENSIVE' as const,
+    openNow: true,
+    types: ['restaurant', 'japanese_restaurant'],
+    address: '駅前1-2-3',
+  },
+  {
+    id: 'mock-2',
+    name: '麺屋 こだま',
+    baseDistanceMeters: 320,
+    bearingDegrees: 95,
+    rating: 4.5,
+    priceLevel: 'PRICE_LEVEL_MODERATE' as const,
+    openNow: true,
+    types: ['restaurant', 'ramen_restaurant'],
+    address: '中央通り5-6-1',
+  },
+  {
+    id: 'mock-3',
+    name: 'スパイス香房',
+    baseDistanceMeters: 420,
+    bearingDegrees: 210,
+    rating: 4.1,
+    priceLevel: 'PRICE_LEVEL_INEXPENSIVE' as const,
+    openNow: false,
+    types: ['restaurant', 'curry_restaurant'],
+    address: '南町3-8-10',
+  },
+  {
+    id: 'mock-4',
+    name: 'トラットリア ソレイユ',
+    baseDistanceMeters: 290,
+    bearingDegrees: 300,
+    rating: 4.6,
+    priceLevel: 'PRICE_LEVEL_EXPENSIVE' as const,
+    openNow: true,
+    types: ['restaurant', 'italian_restaurant'],
+    address: '西新町7-4-2',
+  },
+  {
+    id: 'mock-5',
+    name: '茶寮 ほっと',
+    baseDistanceMeters: 150,
+    bearingDegrees: 135,
+    rating: 4.0,
+    priceLevel: null,
+    openNow: null,
+    types: ['cafe'],
+    address: '北広場2-1-5',
+  },
+];
+
+function getCacheBinding(c: Context<{ Bindings: Env }>): CacheLike {
+  return c.env.CACHE ?? inMemoryCache;
+}
+
+function createInMemoryCache(): CacheLike {
+  const store = new Map<string, { value: string; expiresAt: number | null }>();
+
+  return {
+    async get(key: string, options?: { type?: 'json' | 'text' }) {
+      const record = store.get(key);
+      if (!record) return null;
+      if (record.expiresAt && record.expiresAt <= Date.now()) {
+        store.delete(key);
+        return null;
+      }
+
+      if (options?.type === 'json') {
+        try {
+          return JSON.parse(record.value);
+        } catch {
+          return null;
+        }
+      }
+
+      return record.value;
+    },
+    async put(key: string, value: string, options?: { expirationTtl?: number }) {
+      const expiresAt = options?.expirationTtl ? Date.now() + options.expirationTtl * 1000 : null;
+      store.set(key, { value, expiresAt });
+    },
+    async delete(key: string) {
+      store.delete(key);
+    },
+  } as CacheLike;
+}
+
 app.get('/api/health', (c) => c.text('ok'));
 
 app.get('/api/maps/static', async (c) => {
-  const apiKey = c.env.GOOGLE_PLACES_API_KEY;
-  if (!apiKey) {
-    return c.text('Missing Google API key', 500);
-  }
-
   const lat = parseFloat(c.req.query('lat') ?? '');
   const lng = parseFloat(c.req.query('lng') ?? '');
 
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
     return c.text('Invalid coordinates', 400);
+  }
+
+  const apiKey = c.env.GOOGLE_PLACES_API_KEY;
+  if (!apiKey) {
+    return createPlaceholderMap(lat, lng);
   }
 
   const url = new URL('https://maps.googleapis.com/maps/api/staticmap');
@@ -84,10 +182,8 @@ app.get('/api/maps/static', async (c) => {
 });
 
 app.post('/api/search', async (c) => {
+  const cache = getCacheBinding(c);
   const apiKey = c.env.GOOGLE_PLACES_API_KEY;
-  if (!apiKey) {
-    return c.json({ error: 'Google Places API key is not configured.' }, 500);
-  }
 
   const body = await safeParseBody(c);
   if (!body.ok) {
@@ -96,17 +192,25 @@ app.post('/api/search', async (c) => {
   const request = body.value;
 
   const rateKey = getRateLimitKey(c);
-  const rate = await consumeToken(c, rateKey);
+  const rate = await consumeToken(cache, rateKey);
   if (!rate.allowed) {
     c.header('Retry-After', rate.retryAfterSeconds.toString());
     return c.json({ error: 'Too many requests' }, 429);
   }
 
   const cacheKey = buildCacheKey(request);
-  const cached = await c.env.CACHE.get<CachedSearchResponse>(cacheKey, { type: 'json' });
+  const cached = await cache.get<CachedSearchResponse>(cacheKey, { type: 'json' });
   if (cached) {
     c.header('X-Cache', 'HIT');
     return c.json(cached);
+  }
+
+  if (!apiKey) {
+    const mockResponse = buildMockSearchResponse(request);
+    await cache.put(cacheKey, JSON.stringify(mockResponse), { expirationTtl: 120 });
+    c.header('X-Cache', 'MISS');
+    c.header('X-Mock-Data', 'true');
+    return c.json(mockResponse);
   }
 
   const places = await fetchNearbyPlaces(request, apiKey);
@@ -120,7 +224,7 @@ app.post('/api/search', async (c) => {
     cachedAt: Date.now(),
   };
 
-  await c.env.CACHE.put(cacheKey, JSON.stringify(response), { expirationTtl: SEARCH_CACHE_TTL });
+  await cache.put(cacheKey, JSON.stringify(response), { expirationTtl: SEARCH_CACHE_TTL });
 
   c.header('X-Cache', 'MISS');
   return c.json(response);
@@ -137,11 +241,11 @@ function getRateLimitKey(c: Context<{ Bindings: Env }>): string {
   return `ip:${ip}`;
 }
 
-async function consumeToken(c: Context<{ Bindings: Env }>, key: string) {
+async function consumeToken(cache: CacheLike, key: string) {
   type Bucket = { tokens: number; updatedAt: number };
   const bucketKey = `ratelimit:${key}`;
   const now = Date.now();
-  const existing = await c.env.CACHE.get<Bucket>(bucketKey, { type: 'json' });
+  const existing = await cache.get<Bucket>(bucketKey, { type: 'json' });
   const capacity = RATE_LIMIT_CAPACITY;
 
   let tokens = capacity;
@@ -155,13 +259,13 @@ async function consumeToken(c: Context<{ Bindings: Env }>, key: string) {
   }
 
   if (tokens < 1) {
-    await c.env.CACHE.put(bucketKey, JSON.stringify({ tokens, updatedAt }), { expirationTtl: 120 });
+    await cache.put(bucketKey, JSON.stringify({ tokens, updatedAt }), { expirationTtl: 120 });
     const retryAfter = Math.ceil(RATE_LIMIT_INTERVAL_MS / capacity / 1000);
     return { allowed: false, retryAfterSeconds: retryAfter };
   }
 
   tokens -= 1;
-  await c.env.CACHE.put(bucketKey, JSON.stringify({ tokens, updatedAt }), { expirationTtl: 120 });
+  await cache.put(bucketKey, JSON.stringify({ tokens, updatedAt }), { expirationTtl: 120 });
   return { allowed: true, retryAfterSeconds: 0 };
 }
 
@@ -198,6 +302,80 @@ function buildCacheKey(req: SearchRequest) {
   const roundedLat = location.lat.toFixed(4);
   const roundedLng = location.lng.toFixed(4);
   return `search:${roundedLat}:${roundedLng}:${radius_m}:${cuisineKey}:${budgetKey}`;
+}
+
+function buildMockSearchResponse(req: SearchRequest): CachedSearchResponse {
+  const limit = Math.min(req.limit ?? 5, MOCK_PLACE_TEMPLATES.length);
+  const cuisines = (req.cuisine ?? []).filter(Boolean);
+  const fallbackLabels = ['定食', 'ラーメン', 'カレー', '寿司', 'カフェ'];
+  const labels = cuisines.length > 0 ? cuisines : fallbackLabels;
+  const radius = Math.max(100, Math.min(req.radius_m, 1000));
+
+  const useFallbackLabels = cuisines.length === 0;
+
+  const results = Array.from({ length: limit }).map((_, index) => {
+    const template = MOCK_PLACE_TEMPLATES[index % MOCK_PLACE_TEMPLATES.length];
+    const label = labels[index % labels.length];
+    const distance = Math.min(radius, template.baseDistanceMeters + index * 80);
+    const coords = displaceCoordinate(
+      req.location.lat,
+      req.location.lng,
+      distance,
+      template.bearingDegrees
+    );
+
+    const place: GooglePlace = {
+      id: `${template.id}-${index}`,
+      displayName: { text: useFallbackLabels ? template.name : `${template.name} (${label})` },
+      rating: template.rating,
+      priceLevel: template.priceLevel ?? undefined,
+      types: template.types,
+      currentOpeningHours: template.openNow == null ? undefined : { openNow: template.openNow },
+      location: {
+        latitude: coords.latitude,
+        longitude: coords.longitude,
+      },
+      googleMapsUri: `https://www.google.com/maps/search/?api=1&query=${coords.latitude},${coords.longitude}`,
+      shortFormattedAddress: template.address,
+    };
+
+    return buildSearchResult(place, req);
+  });
+
+  return {
+    results,
+    cachedAt: Date.now(),
+  };
+}
+
+function displaceCoordinate(
+  lat: number,
+  lng: number,
+  distanceMeters: number,
+  bearingDegrees: number
+) {
+  const earthRadius = 6371e3;
+  const angularDistance = distanceMeters / earthRadius;
+  const bearing = (bearingDegrees * Math.PI) / 180;
+  const latRad = (lat * Math.PI) / 180;
+  const lngRad = (lng * Math.PI) / 180;
+
+  const newLatRad = Math.asin(
+    Math.sin(latRad) * Math.cos(angularDistance) +
+      Math.cos(latRad) * Math.sin(angularDistance) * Math.cos(bearing)
+  );
+
+  const newLngRad =
+    lngRad +
+    Math.atan2(
+      Math.sin(bearing) * Math.sin(angularDistance) * Math.cos(latRad),
+      Math.cos(angularDistance) - Math.sin(latRad) * Math.sin(newLatRad)
+    );
+
+  return {
+    latitude: (newLatRad * 180) / Math.PI,
+    longitude: (newLngRad * 180) / Math.PI,
+  };
 }
 
 async function fetchNearbyPlaces(req: SearchRequest, apiKey: string) {
@@ -361,6 +539,34 @@ function priceToScore(priceLevel: string | null) {
     PRICE_LEVEL_VERY_EXPENSIVE: 0.2,
   };
   return mapping[priceLevel] ?? 0.6;
+}
+
+function createPlaceholderMap(lat: number, lng: number) {
+  const [width, height] = STATIC_MAP_SIZE.split('x').map((value) => Number.parseInt(value, 10));
+  const safeWidth = Number.isFinite(width) ? width : 640;
+  const safeHeight = Number.isFinite(height) ? height : 360;
+  const label = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+  const svg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="${safeWidth}" height="${safeHeight}" viewBox="0 0 ${safeWidth} ${safeHeight}">
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#ede9fe" />
+      <stop offset="100%" stop-color="#c4b5fd" />
+    </linearGradient>
+  </defs>
+  <rect width="${safeWidth}" height="${safeHeight}" fill="url(#bg)" rx="24" />
+  <text x="50%" y="45%" text-anchor="middle" font-family="Arial, sans-serif" font-size="32" fill="#312e81">Mock Map</text>
+  <text x="50%" y="60%" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" fill="#4338ca">${label}</text>
+  <text x="50%" y="75%" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#4f46e5">Set GOOGLE_PLACES_API_KEY to see real maps</text>
+</svg>`;
+
+  return new Response(svg, {
+    status: 200,
+    headers: {
+      'Content-Type': 'image/svg+xml; charset=utf-8',
+      'Cache-Control': 'public, max-age=60',
+    },
+  });
 }
 
 export default app;

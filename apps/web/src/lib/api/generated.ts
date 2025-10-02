@@ -34,12 +34,26 @@ export const postSearch = (
     body: JSON.stringify(searchRequest),
     ...fetchOptions,
   }).then(async (response) => {
-    const data = (await response.json()) as SearchResponse;
+    const text = await response.text();
+    let data: SearchResponse | null = null;
+
+    if (text) {
+      try {
+        data = JSON.parse(text) as SearchResponse;
+      } catch {
+        data = null;
+      }
+    }
 
     if (!response.ok) {
       const error = new Error(`Failed to search (status ${response.status})`);
       (error as Error & { response?: Response }).response = response;
+      (error as Error & { body?: string }).body = text;
       throw error;
+    }
+
+    if (!data) {
+      throw new Error('Unexpected empty response body');
     }
 
     return data;
