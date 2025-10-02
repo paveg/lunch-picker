@@ -1,0 +1,8 @@
+node_modules
+.pnpm-store
+.build
+coverage
+apps/web/.svelte-kit
+apps/web/build
+apps/api/.wrangler
+apps/api/dist

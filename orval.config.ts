@@ -1,5 +1,5 @@
 export default {
-  lunch-picker: {
+  "lunch-picker": {
     input: './packages/openapi/openapi.yaml',
     output: {
       target: 'apps/web/src/lib/api/generated.ts',

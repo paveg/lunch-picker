@@ -4,21 +4,25 @@
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "lint": "eslint src --ext .ts,.svelte",
+    "lint:fix": "eslint src --ext .ts,.svelte --fix",
+    "format": "prettier --check .",
+    "format:write": "prettier --write ."
   },
   "dependencies": {
     "@melt-ui/svelte": "^0.76.0",
-    "@sveltejs/kit": "^2",
     "@tanstack/svelte-query": "^5",
+    "autoprefixer": "^10",
     "lucide-svelte": "^0.474.0",
-    "svelte": "^5",
-    "tailwindcss": "^3",
     "postcss": "^8",
-    "autoprefixer": "^10"
+    "svelte": "^5",
+    "tailwindcss": "^3"
   },
   "devDependencies": {
-    "@sveltejs/adapter-cloudflare": "^4",
+    "@sveltejs/adapter-cloudflare": "^7.2.4",
+    "@sveltejs/kit": "^2.43.7",
     "typescript": "^5",
-    "vite": "^5"
+    "vite": "^6.3.6"
   }
 }

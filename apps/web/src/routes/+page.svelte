@@ -1,7 +1,7 @@
 <script lang="ts">
   import Button from '$lib/ui/Button.svelte';
   import { createQuery } from '@tanstack/svelte-query';
-  import { searchPlaces } from '$lib/api/generated';
+  import { searchPlaces } from '$lib/api/client';
 
   let radius = 1200;
   let budgetMax: string | null = null;
@@ -26,18 +26,21 @@
       const parsedBudget = budgetMax && budgetMax !== '' ? Number(budgetMax) : null;
 
       return (
-        await searchPlaces({
-          body: {
-            location: loc,
-            radius_m: radius,
-            cuisine: cuisine ? cuisine.split(',').map((s) => s.trim()) : [],
-            budget: parsedBudget == null || Number.isNaN(parsedBudget) ? null : { max: parsedBudget },
-            limit: 5
-          }
-        })
-      ).results ?? [];
+        (
+          await searchPlaces({
+            body: {
+              location: loc,
+              radius_m: radius,
+              cuisine: cuisine ? cuisine.split(',').map((s) => s.trim()) : [],
+              budget:
+                parsedBudget == null || Number.isNaN(parsedBudget) ? null : { max: parsedBudget },
+              limit: 5,
+            },
+          })
+        ).results ?? []
+      );
     },
-    enabled: false
+    enabled: false,
   });
 </script>
 
@@ -65,7 +68,9 @@
           <div class="flex justify-between">
             <div>
               <h2 class="font-semibold">{r.name}</h2>
-              <p class="text-xs text-gray-500">★{r.rating ?? '-'}・{Math.round(r.distance_m)}m・価格:{r.price_level ?? '-'}</p>
+              <p class="text-xs text-gray-500">
+                ★{r.rating ?? '-'}・{Math.round(r.distance_m)}m・価格:{r.price_level ?? '-'}
+              </p>
             </div>
             <a href={r.gmaps_url} target="_blank" class="text-xs underline">Google Maps</a>
           </div>
