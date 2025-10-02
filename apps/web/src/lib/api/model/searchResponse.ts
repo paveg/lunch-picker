@@ -7,5 +7,7 @@
 import type { SearchResult } from './searchResult';
 
 export interface SearchResponse {
+  /** Epoch millis when the response was cached. */
+  cachedAt?: number;
   results?: SearchResult[];
 }

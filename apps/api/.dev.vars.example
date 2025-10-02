@@ -1,0 +1,2 @@
+# Copy to .dev.vars and replace with a valid Google Places API key
+GOOGLE_PLACES_API_KEY="your-google-places-api-key"

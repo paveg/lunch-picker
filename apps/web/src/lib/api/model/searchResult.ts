@@ -6,10 +6,20 @@
  */
 
 export interface SearchResult {
-  distance_m?: number;
+  /** @nullable */
+  address?: string | null;
+  distance_m: number;
+  /** Combined score derived from rating, distance, price level, and open state. */
+  fit_score?: number;
   gmaps_url: string;
   name: string;
-  price_level?: string;
-  rating?: number;
-  static_map_url?: string;
+  /** @nullable */
+  open_now?: boolean | null;
+  place_id: string;
+  /** @nullable */
+  price_level?: string | null;
+  /** @nullable */
+  rating?: number | null;
+  static_map_url: string;
+  types?: string[];
 }

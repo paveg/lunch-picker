@@ -2,6 +2,8 @@ openapi: 3.1.0
 info:
   title: Lunch Picker API
   version: 0.1.0
+servers:
+  - url: /api
 paths:
   /search:
     post:
@@ -63,21 +65,41 @@ components:
     SearchResult:
       type: object
       required:
+        - place_id
         - name
         - gmaps_url
+        - distance_m
+        - static_map_url
       properties:
+        place_id:
+          type: string
         name:
           type: string
         rating:
           type: number
+          nullable: true
         distance_m:
           type: number
         price_level:
           type: string
+          nullable: true
+        open_now:
+          type: boolean
+          nullable: true
+        fit_score:
+          type: number
+          description: Combined score derived from rating, distance, price level, and open state.
         static_map_url:
           type: string
         gmaps_url:
           type: string
+        address:
+          type: string
+          nullable: true
+        types:
+          type: array
+          items:
+            type: string
     SearchResponse:
       type: object
       properties:
@@ -85,3 +107,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/SearchResult'
+        cachedAt:
+          type: integer
+          description: Epoch millis when the response was cached.

@@ -10,8 +10,6 @@ import type {
   CreateMutationResult,
   MutationFunction,
 } from '@tanstack/svelte-query';
-import axios from 'axios';
-import type { AxiosError, AxiosRequestConfig, AxiosResponse } from 'axios';
 import type { SearchRequest, SearchResponse } from './model';
 
 type AwaitedInput<T> = PromiseLike<T> | T;
@@ -23,29 +21,46 @@ type Awaited<O> = O extends AwaitedInput<infer T> ? T : never;
  */
 export const postSearch = (
   searchRequest: SearchRequest,
-  options?: AxiosRequestConfig
-): Promise<AxiosResponse<SearchResponse>> => {
-  return axios.post(`/search`, searchRequest, options);
+  options?: RequestInit & { baseURL?: string }
+): Promise<SearchResponse> => {
+  const { baseURL = '/api', headers, ...fetchOptions } = options ?? {};
+
+  return fetch(`${baseURL}/search`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...headers,
+    },
+    body: JSON.stringify(searchRequest),
+    ...fetchOptions,
+  }).then(async (response) => {
+    const data = (await response.json()) as SearchResponse;
+
+    if (!response.ok) {
+      const error = new Error(`Failed to search (status ${response.status})`);
+      (error as Error & { response?: Response }).response = response;
+      throw error;
+    }
+
+    return data;
+  });
 };
 
-export const getPostSearchMutationOptions = <
-  TError = AxiosError<unknown>,
-  TContext = unknown,
->(options?: {
+export const getPostSearchMutationOptions = <TError = Error, TContext = unknown>(options?: {
   mutation?: CreateMutationOptions<
     Awaited<ReturnType<typeof postSearch>>,
     TError,
     { data: SearchRequest },
     TContext
   >;
-  axios?: AxiosRequestConfig;
+  fetch?: RequestInit & { baseURL?: string };
 }): CreateMutationOptions<
   Awaited<ReturnType<typeof postSearch>>,
   TError,
   { data: SearchRequest },
   TContext
 > => {
-  const { mutation: mutationOptions, axios: axiosOptions } = options ?? {};
+  const { mutation: mutationOptions, fetch: fetchOptions } = options ?? {};
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof postSearch>>,
@@ -53,7 +68,7 @@ export const getPostSearchMutationOptions = <
   > = (props) => {
     const { data } = props ?? {};
 
-    return postSearch(data, axiosOptions);
+    return postSearch(data, fetchOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -61,19 +76,19 @@ export const getPostSearchMutationOptions = <
 
 export type PostSearchMutationResult = NonNullable<Awaited<ReturnType<typeof postSearch>>>;
 export type PostSearchMutationBody = SearchRequest;
-export type PostSearchMutationError = AxiosError<unknown>;
+export type PostSearchMutationError = Error;
 
 /**
  * @summary Search for lunch spots
  */
-export const createPostSearch = <TError = AxiosError<unknown>, TContext = unknown>(options?: {
+export const createPostSearch = <TError = Error, TContext = unknown>(options?: {
   mutation?: CreateMutationOptions<
     Awaited<ReturnType<typeof postSearch>>,
     TError,
     { data: SearchRequest },
     TContext
   >;
-  axios?: AxiosRequestConfig;
+  fetch?: RequestInit & { baseURL?: string };
 }): CreateMutationResult<
   Awaited<ReturnType<typeof postSearch>>,
   TError,

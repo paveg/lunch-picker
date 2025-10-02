@@ -1,11 +1,7 @@
 import type { SearchRequest, SearchResponse } from './model';
 
-interface SearchPlacesArgs {
-  body: SearchRequest;
-}
-
-export async function searchPlaces({ body }: SearchPlacesArgs): Promise<SearchResponse> {
-  const res = await fetch('/search', {
+export async function searchPlaces(body: SearchRequest): Promise<SearchResponse> {
+  const res = await fetch('/api/search', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),

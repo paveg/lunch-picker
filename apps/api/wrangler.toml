@@ -13,3 +13,4 @@ id = "<your-kv-id>"
 
 [vars]
 NODE_ENV = "production"
+# GOOGLE_PLACES_API_KEY is provided via `.dev.vars` in development or Wrangler secrets in production.

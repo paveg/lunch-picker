@@ -1,7 +1,7 @@
 <script lang="ts">
   import Button from '$lib/ui/Button.svelte';
-  import { createQuery } from '@tanstack/svelte-query';
-  import { searchPlaces } from '$lib/api/client';
+  import { createPostSearch } from '$lib/api/generated';
+  import { get } from 'svelte/store';
 
   let radius = 1200;
   let budgetMax: string | null = null;
@@ -19,29 +19,35 @@
     }
   }
 
-  const q = createQuery({
-    queryKey: ['search', radius, budgetMax, cuisine],
-    queryFn: async () => {
-      const loc = await getCoords();
-      const parsedBudget = budgetMax && budgetMax !== '' ? Number(budgetMax) : null;
-
-      return (
-        (
-          await searchPlaces({
-            body: {
-              location: loc,
-              radius_m: radius,
-              cuisine: cuisine ? cuisine.split(',').map((s) => s.trim()) : [],
-              budget:
-                parsedBudget == null || Number.isNaN(parsedBudget) ? null : { max: parsedBudget },
-              limit: 5,
-            },
-          })
-        ).results ?? []
-      );
-    },
-    enabled: false,
+  const searchMutation = createPostSearch({
+    fetch: { baseURL: '/api' },
   });
+
+  const triggerSearch = async () => {
+    if (get(searchMutation).isPending) return;
+
+    const loc = await getCoords();
+    const parsedBudget = budgetMax && budgetMax !== '' ? Number(budgetMax) : null;
+
+    try {
+      await get(searchMutation).mutateAsync({
+        data: {
+          location: loc,
+          radius_m: radius,
+          cuisine: cuisine
+            ? cuisine
+                .split(',')
+                .map((s) => s.trim())
+                .filter(Boolean)
+            : [],
+          budget: parsedBudget == null || Number.isNaN(parsedBudget) ? null : { max: parsedBudget },
+          limit: 5,
+        },
+      });
+    } catch (error) {
+      console.error('Search request failed', error);
+    }
+  };
 </script>
 
 <div class="max-w-3xl mx-auto p-4 space-y-4">
@@ -56,14 +62,14 @@
       <option value="4">~4</option>
     </select>
     <input placeholder="カレー, ラーメン" bind:value={cuisine} class="border rounded-xl p-2" />
-    <Button on:click={() => q.refetch()}>探す</Button>
+    <Button on:click={triggerSearch} disabled={$searchMutation.isPending}>探す</Button>
   </div>
 
-  {#if q.isFetching}
+  {#if $searchMutation.isPending}
     <p class="text-sm text-gray-500">検索中…</p>
-  {:else if q.data?.length}
+  {:else if $searchMutation.isSuccess && $searchMutation.data?.results?.length}
     <div class="space-y-3">
-      {#each q.data as r}
+      {#each $searchMutation.data?.results ?? [] as r}
         <article class="bg-white rounded-2xl p-4 shadow-sm">
           <div class="flex justify-between">
             <div>
@@ -78,6 +84,8 @@
         </article>
       {/each}
     </div>
+  {:else if $searchMutation.isError}
+    <p class="text-sm text-red-500">検索に失敗しました</p>
   {:else}
     <p class="text-sm text-gray-500">候補がありません</p>
   {/if}

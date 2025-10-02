@@ -1,6 +1,15 @@
 <script lang="ts">
+  import { createEventDispatcher } from 'svelte';
+
   export let variant: 'primary' | 'secondary' | 'ghost' = 'primary';
   export let disabled = false;
+
+  const dispatch = createEventDispatcher<{ click: MouseEvent }>();
+
+  function handleClick(event: MouseEvent) {
+    if (disabled) return;
+    dispatch('click', event);
+  }
 </script>
 
 <button
@@ -11,6 +20,7 @@
          data-[v=ghost]:bg-transparent data-[v=ghost]:text-gray-700 data-[v=ghost]:hover:bg-gray-100"
   data-v={variant}
   {disabled}
+  on:click={handleClick}
 >
   <slot />
 </button>
