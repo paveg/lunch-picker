@@ -1,0 +1,87 @@
+openapi: 3.1.0
+info:
+  title: Lunch Picker API
+  version: 0.1.0
+paths:
+  /search:
+    post:
+      summary: Search for lunch spots
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SearchRequest'
+      responses:
+        '200':
+          description: List of restaurants
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResponse'
+components:
+  schemas:
+    Coordinates:
+      type: object
+      required:
+        - lat
+        - lng
+      properties:
+        lat:
+          type: number
+        lng:
+          type: number
+    SearchRequest:
+      type: object
+      required:
+        - location
+        - radius_m
+      properties:
+        location:
+          $ref: '#/components/schemas/Coordinates'
+        radius_m:
+          type: integer
+          minimum: 0
+        cuisine:
+          type: array
+          items:
+            type: string
+          default: []
+        budget:
+          anyOf:
+            - type: 'null'
+            - type: object
+              required:
+                - max
+              properties:
+                max:
+                  type: number
+        limit:
+          type: integer
+          minimum: 1
+          default: 5
+    SearchResult:
+      type: object
+      required:
+        - name
+        - gmaps_url
+      properties:
+        name:
+          type: string
+        rating:
+          type: number
+        distance_m:
+          type: number
+        price_level:
+          type: string
+        static_map_url:
+          type: string
+        gmaps_url:
+          type: string
+    SearchResponse:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SearchResult'

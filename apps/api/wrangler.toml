@@ -1,0 +1,15 @@
+name = "lunch-picker-api"
+main = "src/index.ts"
+compatibility_date = "2025-10-03"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "lunch-picker"
+database_id = "<your-d1-id>"
+
+[[kv_namespaces]]
+binding = "CACHE"
+id = "<your-kv-id>"
+
+[vars]
+NODE_ENV = "production"

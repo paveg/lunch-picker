@@ -1,0 +1,14 @@
+{
+  "name": "lunch-picker",
+  "private": true,
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "dev:web": "pnpm --filter web dev",
+    "dev:api": "pnpm --filter api dev",
+    "orval": "orval --config orval.config.ts --watch",
+    "build": "pnpm -r build"
+  },
+  "devDependencies": {
+    "orval": "^6"
+  }
+}

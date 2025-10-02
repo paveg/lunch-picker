@@ -1,0 +1,24 @@
+{
+  "name": "web",
+  "type": "module",
+  "scripts": {
+    "dev": "vite dev",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@melt-ui/svelte": "^0.76.0",
+    "@sveltejs/kit": "^2",
+    "@tanstack/svelte-query": "^5",
+    "lucide-svelte": "^0.474.0",
+    "svelte": "^5",
+    "tailwindcss": "^3",
+    "postcss": "^8",
+    "autoprefixer": "^10"
+  },
+  "devDependencies": {
+    "@sveltejs/adapter-cloudflare": "^4",
+    "typescript": "^5",
+    "vite": "^5"
+  }
+}

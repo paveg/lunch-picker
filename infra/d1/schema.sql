@@ -1,0 +1,1 @@
+-- TODO: Define preferences / decisions / votes / search_logs tables here.
