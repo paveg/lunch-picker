@@ -107,6 +107,8 @@ Continuous integration and deployment are automated via two workflows under `.gi
 - `ci.yml` — runs on every pull request and push to `main`. It installs dependencies, runs `pnpm lint`, and builds the web client. Treat this job as required for PR merge protection.
 - `deploy.yml` — runs on pushes to `main` (and on manual `workflow_dispatch`). It deploys the Worker (`wrangler deploy`) and publishes the Pages project via `cloudflare/pages-action`.
 
+> Note: Because the repository does not track `pnpm-lock.yaml`, the workflows skip package-manager caching and run `pnpm install` without `--frozen-lockfile`. If you add a lock file later, re-enable caching by setting `cache: pnpm` in `actions/setup-node` and switch the install command to `pnpm install --frozen-lockfile`.
+
 ### Required GitHub secrets
 
 | Secret | Description | Scope |
@@ -116,6 +118,19 @@ Continuous integration and deployment are automated via two workflows under `.gi
 | `CLOUDFLARE_PAGES_PROJECT` | Cloudflare Pages project name (e.g. `lunch-picker-web`). | Required by Pages action |
 
 Set these values in the repository’s **Settings → Secrets and variables → Actions**. Optionally add them as organization secrets if multiple repos share the same infrastructure.
+
+#### How to create the Cloudflare API token
+
+1. Log in to the Cloudflare dashboard and open **My Profile → API Tokens**.
+2. Click **Create Token** → **Create Custom Token**.
+3. Add these permissions:
+   - Workers KV Storage → Edit
+   - Workers Scripts → Edit
+   - Pages → Edit
+4. Under **Account Resources**, select your target account (or “All accounts” if you prefer).
+5. Create the token and copy the generated string once. Store it as the `CLOUDFLARE_API_TOKEN` GitHub secret.
+6. From the same account overview page, copy the **Account ID**; this becomes `CLOUDFLARE_ACCOUNT_ID`.
+7. In the Cloudflare Pages project settings, note the project slug (e.g. `lunch-picker-web`) and store it as `CLOUDFLARE_PAGES_PROJECT`.
 
 ### Manual rollback
 
