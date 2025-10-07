@@ -35,7 +35,15 @@ This project runs entirely on Cloudflare. The API lives in `apps/api` (Workers +
    id = "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"
    ```
 
-4. Register secrets that must never appear in source control:
+4. For local development, copy `apps/api/.dev.vars.example` to `apps/api/.dev.vars` and set the API key:
+
+   ```bash
+   cp apps/api/.dev.vars.example apps/api/.dev.vars
+   ```
+
+   The `.dev.vars` file is git-ignored and used by `wrangler dev`.
+
+5. Register secrets that must never appear in source control:
 
    ```bash
    cd apps/api
@@ -43,7 +51,7 @@ This project runs entirely on Cloudflare. The API lives in `apps/api` (Workers +
    ```
 
    Repeat for any additional secrets the Worker consumes. Local development continues to use `.dev.vars`.
-5. Deploy after validating locally with `pnpm --filter api dev`:
+6. Deploy after validating locally with `pnpm --filter api dev`:
 
    ```bash
    cd apps/api
