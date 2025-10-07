@@ -132,6 +132,8 @@ Set these values in the repository’s **Settings → Secrets and variables → 
 6. From the same account overview page, copy the **Account ID**; this becomes `CLOUDFLARE_ACCOUNT_ID`.
 7. In the Cloudflare Pages project settings, note the project slug (e.g. `lunch-picker-web`) and store it as `CLOUDFLARE_PAGES_PROJECT`.
 
+> GitHub Actions note: the `deploy.yml` job requires write access to the Deployments API. If your repository restricts default token permissions, ensure the workflow (or repository settings) grants `GITHUB_TOKEN` the `deployments: write` scope.
+
 ### Manual rollback
 
 - Worker: redeploy a previous git revision by checking it out locally and running `pnpm exec wrangler deploy` from `apps/api`, or trigger `deploy.yml` via `workflow_dispatch` while pinning the commit to roll back to.
