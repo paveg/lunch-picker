@@ -43,12 +43,15 @@ const STATIC_MAP_ZOOM = '16';
 
 const app = new Hono<{ Bindings: Env }>();
 
-app.use('/api/*', cors({
-  origin: (origin) => origin ?? '*',
-  allowMethods: ['GET', 'POST', 'OPTIONS'],
-  allowHeaders: ['Content-Type'],
-  maxAge: 86400,
-}));
+app.use(
+  '/api/*',
+  cors({
+    origin: (origin) => origin ?? '*',
+    allowMethods: ['GET', 'POST', 'OPTIONS'],
+    allowHeaders: ['Content-Type'],
+    maxAge: 86400,
+  })
+);
 
 type CacheLike = Pick<KVNamespace, 'get' | 'put' | 'delete'>;
 

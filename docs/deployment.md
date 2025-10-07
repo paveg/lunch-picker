@@ -1,19 +1,19 @@
 # Production Deployment (Cloudflare)
 
-This project runs entirely on Cloudflare. The API lives in `apps/api` (Workers + Hono), and the web client in `apps/web` (SvelteKit on Cloudflare Pages). The steps below provision a single production environment and outline how to deploy safely after verifying changes locally.
+The entire stack runs on Cloudflare. The API lives in `apps/api` (Workers + Hono) and the web client in `apps/web` (SvelteKit on Cloudflare Pages). This guide shows how to deploy a single production environment while keeping secrets out of the repository.
 
-> **Important:** Never commit credentials (D1 IDs, KV IDs, API keys) to the repository. All sensitive values must stay in Cloudflare or local override files ignored by git.
+> **Never** commit credentials such as D1 IDs, KV IDs, or API keys. Store them in Wrangler secrets or locally ignored files.
 
-## 1. Prepare the API Worker (`apps/api`)
+## 1. API Worker (`apps/api`)
 
-1. Install dependencies and sign in to Cloudflare once:
+1. Install dependencies and authenticate once:
 
    ```bash
    pnpm install
    pnpm --filter api exec wrangler login
    ```
 
-2. Create the persistent resources (run once per account):
+2. Provision D1 and KV (run once per account):
 
    ```bash
    cd apps/api
@@ -21,8 +21,8 @@ This project runs entirely on Cloudflare. The API lives in `apps/api` (Workers +
    pnpm exec wrangler kv namespace create lunch-picker-cache
    ```
 
-   Copy the resulting `database_id` and `namespace_id` from the output.
-3. Copy `apps/api/wrangler.toml.local.example` to `apps/api/wrangler.toml.local` (git-ignored) so Wrangler has the production identifiers:
+   Note the `database_id` and `namespace_id` from the output.
+3. Copy `wrangler.toml.local.example` to `wrangler.toml.local` and paste the IDs:
 
    ```toml
    [[d1_databases]]
@@ -35,56 +35,56 @@ This project runs entirely on Cloudflare. The API lives in `apps/api` (Workers +
    id = "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"
    ```
 
-4. For local development, copy `apps/api/.dev.vars.example` to `apps/api/.dev.vars` and set the API key:
+   The `.local` file is ignored by git and overrides the placeholders in `wrangler.toml`.
+4. For local development, seed `.dev.vars`:
 
    ```bash
    cp apps/api/.dev.vars.example apps/api/.dev.vars
    ```
 
-   The `.dev.vars` file is git-ignored and used by `wrangler dev`.
-
-5. Register secrets that must never appear in source control:
+   Fill in `GOOGLE_PLACES_API_KEY` (this file stays local and is read by `wrangler dev`).
+5. Register production secrets so they never touch git:
 
    ```bash
    cd apps/api
    pnpm exec wrangler secret put GOOGLE_PLACES_API_KEY
    ```
 
-   Repeat for any additional secrets the Worker consumes. Local development continues to use `.dev.vars`.
-6. Deploy after validating locally with `pnpm --filter api dev`:
+   Repeat for any additional secrets.
+6. Deploy after testing with `pnpm --filter api dev`:
 
    ```bash
    cd apps/api
    pnpm exec wrangler deploy
    ```
 
-   The command publishes the Worker to `https://lunch-picker-api.<account>.workers.dev` (or your custom route) with the configured D1 and KV bindings.
+   The worker will be available at `https://lunch-picker-api.<account>.workers.dev` unless you later attach a custom domain.
 
-## 2. Configure Cloudflare Pages (`apps/web`)
+## 2. Cloudflare Pages (`apps/web`)
 
-1. Connect the GitHub repository to a new Pages project.
-2. Use the following build settings:
-   - **Build command:** `pnpm --filter web build`
-   - **Build output directory:** `apps/web/.svelte-kit/cloudflare`
-   - **Package manager:** pnpm (set `PNPM_VERSION` and optionally `NODE_VERSION=20` in the Pages _Environment variables_ section)
-   - **Pages Functions:** Keep enabled (the SvelteKit adapter outputs a Worker under `.svelte-kit/cloudflare`)
-3. Configure deployment branches. Using `main` keeps production automatic; preview deployments are available for pull requests.
-4. Add any environment variables the web app needs.最低限 `PUBLIC_API_BASE_URL=https://lunch-picker-api.<account>.workers.dev/api` を Production / Preview ともに設定しておくと、フロントから Workers ドメインへフェッチできます（ローカル開発では `.env` に同じ値を入れる）。Do **not** expose sensitive keys directly to the client.
+1. Create a Pages project and connect this GitHub repository.
+2. Use these build settings:
+   - Build command: `pnpm --filter web build`
+   - Output directory: `apps/web/.svelte-kit/cloudflare`
+   - Package manager: pnpm (set `PNPM_VERSION` and optionally `NODE_VERSION=20` in environment variables)
+   - Pages Functions: keep enabled (the SvelteKit adapter emits a worker under `.svelte-kit/cloudflare`)
+3. Deployment branches: set `main` for production; PR branches automatically produce preview deployments.
+4. Environment variables: at minimum set `PUBLIC_API_BASE_URL=https://lunch-picker-api.<account>.workers.dev/api` for both Production and Preview so the front end targets the Worker. Mirror the same value in `.env` locally if you want to exercise the remote API during development. Do **not** expose sensitive keys (only public-safe values should be prefixed with `PUBLIC_`).
 
-## 3. Route `/api` traffic to the Worker（任意）
+## 3. Optional: custom domain routing
 
-同一ドメインで完結させたい場合は、独自ドメインを Cloudflare に登録したうえで以下のルート設定を行います。
+If you add your own domain to Cloudflare and want `/api/*` served from the Worker on the same origin:
 
-1. Cloudflare ダッシュボードで **Workers & Pages → Workers → lunch-picker-api → Triggers** を開く。
-2. `https://your-domain.example/api/*` のようにルートを追加し、Worker として `lunch-picker-api` を紐付ける。
-3. `https://your-domain.example/api/health` などが Worker に到達することを確認する。
+1. Cloudflare dashboard → **Workers & Pages → Workers → lunch-picker-api → Triggers**.
+2. Add a route such as `https://your-domain.example/api/*` pointing to `lunch-picker-api`.
+3. Confirm that `https://your-domain.example/api/health` reaches the Worker.
 
-独自ドメインを持たない場合は、この手順をスキップし、`PUBLIC_API_BASE_URL` を Workers の既定ドメイン（例: `https://lunch-picker-api.pavegy.workers.dev`）に向けることで運用できます。
+Without a custom domain, simply keep `PUBLIC_API_BASE_URL` targeting the default Workers URL (e.g. `https://lunch-picker-api.pavegy.workers.dev/api`).
 
-## 4. Production deployment flow
+## 4. Release checklist
 
 1. Develop locally (`pnpm --filter api dev`, `pnpm --filter web dev`).
-2. Run checks (lint, tests) and open a pull request.
+2. Run quality checks (`pnpm lint`, tests) and open a pull request.
 3. After merging to `main`, deploy:
 
    ```bash
@@ -93,9 +93,9 @@ This project runs entirely on Cloudflare. The API lives in `apps/api` (Workers +
    pnpm exec wrangler deploy
 
    # Web
-   # Triggered automatically by Pages on new commits to main
+   # Pages deploys automatically when main updates
    ```
 
-4. Smoke-test the production URLs (Pages + Worker route) before announcing changes.
+4. Smoke-test the production URLs (Pages + Worker route) before sharing the change.
 
-Keep this document updated whenever the deployment process changes (e.g. new secrets, additional services).
+Keep this document current whenever the deployment flow changes (new secrets, new services, etc.).
