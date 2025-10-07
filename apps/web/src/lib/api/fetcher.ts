@@ -30,9 +30,7 @@ function buildUrl(url: string, params?: Record<string, unknown>, baseURL?: strin
   }
 
   const hasBase =
-    baseURL && /^https?:/i.test(baseURL)
-      ? toAbsoluteUrl(url, baseURL)
-      : `${baseURL ?? ''}${url}`;
+    baseURL && /^https?:/i.test(baseURL) ? toAbsoluteUrl(url, baseURL) : `${baseURL ?? ''}${url}`;
 
   const queryString = searchParams.toString();
   return queryString ? `${hasBase}?${queryString}` : hasBase;
