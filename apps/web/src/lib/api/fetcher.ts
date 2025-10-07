@@ -10,6 +10,12 @@ export type FetcherConfig<TVariables> = {
   baseURL?: string;
 };
 
+function toAbsoluteUrl(url: string, baseURL: string) {
+  const baseWithSlash = baseURL.endsWith('/') ? baseURL : `${baseURL}/`;
+  const path = url.startsWith('/') ? url.slice(1) : url;
+  return new URL(path, baseWithSlash).toString();
+}
+
 function buildUrl(url: string, params?: Record<string, unknown>, baseURL?: string) {
   const searchParams = new URLSearchParams();
   if (params) {
@@ -25,7 +31,7 @@ function buildUrl(url: string, params?: Record<string, unknown>, baseURL?: strin
 
   const hasBase =
     baseURL && /^https?:/i.test(baseURL)
-      ? new URL(url, baseURL).toString()
+      ? toAbsoluteUrl(url, baseURL)
       : `${baseURL ?? ''}${url}`;
 
   const queryString = searchParams.toString();

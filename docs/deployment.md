@@ -69,7 +69,7 @@ This project runs entirely on Cloudflare. The API lives in `apps/api` (Workers +
    - **Package manager:** pnpm (set `PNPM_VERSION` and optionally `NODE_VERSION=20` in the Pages _Environment variables_ section)
    - **Pages Functions:** Keep enabled (the SvelteKit adapter outputs a Worker under `.svelte-kit/cloudflare`)
 3. Configure deployment branches. Using `main` keeps production automatic; preview deployments are available for pull requests.
-4. Add any environment variables the web app needs.最低限 `PUBLIC_API_BASE_URL=https://lunch-picker-api.<account>.workers.dev` を Production / Preview ともに設定しておくと、フロントから Workers ドメインへフェッチできます（ローカル開発では `.env` に同じ値を入れる）。Do **not** expose sensitive keys directly to the client.
+4. Add any environment variables the web app needs.最低限 `PUBLIC_API_BASE_URL=https://lunch-picker-api.<account>.workers.dev/api` を Production / Preview ともに設定しておくと、フロントから Workers ドメインへフェッチできます（ローカル開発では `.env` に同じ値を入れる）。Do **not** expose sensitive keys directly to the client.
 
 ## 3. Route `/api` traffic to the Worker（任意）
 
