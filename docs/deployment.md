@@ -99,3 +99,25 @@ Without a custom domain, simply keep `PUBLIC_API_BASE_URL` targeting the default
 4. Smoke-test the production URLs (Pages + Worker route) before sharing the change.
 
 Keep this document current whenever the deployment flow changes (new secrets, new services, etc.).
+
+## 5. GitHub Actions automation
+
+Continuous integration and deployment are automated via two workflows under `.github/workflows/`:
+
+- `ci.yml` — runs on every pull request and push to `main`. It installs dependencies, runs `pnpm lint`, and builds the web client. Treat this job as required for PR merge protection.
+- `deploy.yml` — runs on pushes to `main` (and on manual `workflow_dispatch`). It deploys the Worker (`wrangler deploy`) and publishes the Pages project via `cloudflare/pages-action`.
+
+### Required GitHub secrets
+
+| Secret | Description | Scope |
+| --- | --- | --- |
+| `CLOUDFLARE_API_TOKEN` | API token with **Workers KV Storage:Edit**, **Workers Scripts:Edit**, and **Pages:Edit** permissions. | Used by wrangler deploy and Pages action |
+| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare account ID (32 characters, available in the dashboard). | Used by both deploy steps |
+| `CLOUDFLARE_PAGES_PROJECT` | Cloudflare Pages project name (e.g. `lunch-picker-web`). | Required by Pages action |
+
+Set these values in the repository’s **Settings → Secrets and variables → Actions**. Optionally add them as organization secrets if multiple repos share the same infrastructure.
+
+### Manual rollback
+
+- Worker: redeploy a previous git revision by checking it out locally and running `pnpm exec wrangler deploy` from `apps/api`, or trigger `deploy.yml` via `workflow_dispatch` while pinning the commit to roll back to.
+- Pages: upload a previous build by re-running the `Deploy Cloudflare Pages` job from the desired commit (GitHub UI → Actions → Deploy → select run → Re-run with same SHA). Cloudflare Pages also keeps revision history in the dashboard, allowing direct rollback.
