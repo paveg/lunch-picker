@@ -1,3 +1,5 @@
+import { PUBLIC_API_BASE_URL } from '$env/static/public';
+
 export type FetcherConfig<TVariables> = {
   url: string;
   method: string;
@@ -30,11 +32,13 @@ function buildUrl(url: string, params?: Record<string, unknown>, baseURL?: strin
   return queryString ? `${hasBase}?${queryString}` : hasBase;
 }
 
+const DEFAULT_BASE_URL = PUBLIC_API_BASE_URL || '/api';
+
 export async function fetcher<TData, TVariables = unknown>(
   config: FetcherConfig<TVariables>
 ): Promise<TData> {
   const { url, method, params, headers, data, signal, baseURL } = config;
-  const requestUrl = buildUrl(url, params, baseURL ?? '/api');
+  const requestUrl = buildUrl(url, params, baseURL ?? DEFAULT_BASE_URL);
 
   let body: BodyInit | undefined;
   let resolvedHeaders: HeadersInit | undefined = headers;

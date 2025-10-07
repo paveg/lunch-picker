@@ -1,2 +1,7 @@
-# Copy to .dev.vars and replace with a valid Google Places API key
-GOOGLE_PLACES_API_KEY="your-google-places-api-key"
+# Local development secrets for the API Worker.
+# Copy to `.dev.vars` and fill in values before running `pnpm --filter api dev`.
+
+GOOGLE_PLACES_API_KEY="your-local-places-api-key"
+
+# Uncomment to emulate production bindings during dev.
+# NODE_ENV="development"
