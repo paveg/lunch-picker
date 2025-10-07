@@ -10,12 +10,6 @@ export type FetcherConfig<TVariables> = {
   baseURL?: string;
 };
 
-function toAbsoluteUrl(url: string, baseURL: string) {
-  const baseWithSlash = baseURL.endsWith('/') ? baseURL : `${baseURL}/`;
-  const path = url.startsWith('/') ? url.slice(1) : url;
-  return new URL(path, baseWithSlash).toString();
-}
-
 function buildUrl(url: string, params?: Record<string, unknown>, baseURL?: string) {
   const searchParams = new URLSearchParams();
   if (params) {
@@ -29,14 +23,30 @@ function buildUrl(url: string, params?: Record<string, unknown>, baseURL?: strin
     });
   }
 
-  const hasBase =
-    baseURL && /^https?:/i.test(baseURL) ? toAbsoluteUrl(url, baseURL) : `${baseURL ?? ''}${url}`;
+  const hasBase = baseURL ? mergeBaseAndPath(baseURL, url) : url;
 
   const queryString = searchParams.toString();
   return queryString ? `${hasBase}?${queryString}` : hasBase;
 }
 
 const DEFAULT_BASE_URL = PUBLIC_API_BASE_URL || '/api';
+
+function mergeBaseAndPath(baseURL: string, path: string) {
+  if (!/^https?:/i.test(baseURL)) {
+    const separator = baseURL.endsWith('/') || path.startsWith('/') ? '' : '/';
+    return `${baseURL}${separator}${path.replace(/^\//, '')}`;
+  }
+
+  const base = new URL(baseURL);
+  if (!base.pathname || base.pathname === '/') {
+    base.pathname = '/api/';
+  } else if (!base.pathname.endsWith('/')) {
+    base.pathname = `${base.pathname}/`;
+  }
+
+  const normalizedPath = path.startsWith('/') ? path.slice(1) : path;
+  return new URL(normalizedPath, base).toString();
+}
 
 export async function fetcher<TData, TVariables = unknown>(
   config: FetcherConfig<TVariables>
