@@ -19,6 +19,7 @@ pnpm-debug.log*
 .env
 .env.*
 apps/api/.dev.vars
+apps/api/wrangler.toml.local
 
 # Editor junk
 .DS_Store

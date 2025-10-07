@@ -1,16 +1,20 @@
+# Production deployment config. See docs/deployment.md for setup instructions.
 name = "lunch-picker-api"
 main = "src/index.ts"
 compatibility_date = "2025-10-01"
-
-[[d1_databases]]
-binding = "DB"
-database_name = "lunch-picker"
-database_id = "<your-d1-id>"
-
-[[kv_namespaces]]
-binding = "CACHE"
-id = "<your-kv-id>"
+workers_dev = true
 
 [vars]
 NODE_ENV = "production"
 # GOOGLE_PLACES_API_KEY is provided via `.dev.vars` in development or Wrangler secrets in production.
+
+[[d1_databases]]
+binding = "DB"
+database_name = "lunch-picker"
+# Provide the production database_id via apps/api/wrangler.toml.local (git-ignored).
+database_id = "<set-in-wrangler.toml.local>"
+
+[[kv_namespaces]]
+binding = "CACHE"
+# Provide the production namespace id via apps/api/wrangler.toml.local (git-ignored).
+id = "<set-in-wrangler.toml.local>"
