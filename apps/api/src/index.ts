@@ -41,57 +41,21 @@ const SEARCH_CACHE_TTL = 600; // seconds
 const STATIC_MAP_SIZE = '640x360';
 const STATIC_MAP_ZOOM = '16';
 
-const allowedOrigins = [
-  'https://lunch-picker-bbw.pages.dev',
-  'http://localhost:5173',
-  'http://127.0.0.1:5173',
-];
+const app = new Hono<{ Bindings: Env }>();
 
-const isAllowedOrigin = (origin?: string | null) => {
-  if (!origin) return true;
-  if (allowedOrigins.includes(origin)) return true;
-  if (origin.endsWith('.pages.dev')) return true;
-  return false;
-};
-
-const buildCorsHeaders = (origin?: string | null) => {
-  const allowOrigin = !origin || isAllowedOrigin(origin) ? (origin ?? '*') : 'null';
-  return {
-    'Access-Control-Allow-Origin': allowOrigin,
+app.options('/api/*', (c) =>
+  c.body(null, 204, {
+    'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
     'Access-Control-Max-Age': '86400',
-    Vary: 'Origin',
-  } as const;
-};
-
-const app = new Hono<{ Bindings: Env }>();
-
-app.options('/api/*', (c) => {
-  const origin = c.req.header('Origin');
-  if (!isAllowedOrigin(origin)) {
-    return c.body(null, 403, {
-      ...buildCorsHeaders(origin),
-    });
-  }
-  return c.body(null, 204, buildCorsHeaders(origin));
-});
-
-app.use('/api/*', (c, next) => {
-  const origin = c.req.header('Origin');
-  if (!isAllowedOrigin(origin)) {
-    return c.body('Forbidden', 403, buildCorsHeaders(origin));
-  }
-  return next();
-});
+  })
+);
 
 app.use(
   '/api/*',
   cors({
-    origin: (origin) => {
-      if (!origin) return '*';
-      return isAllowedOrigin(origin) ? origin : 'null';
-    },
+    origin: '*',
     allowMethods: ['GET', 'POST', 'OPTIONS'],
     allowHeaders: ['Content-Type'],
     maxAge: 86400,
