@@ -6,7 +6,13 @@ export default {
       schemas: 'apps/web/src/lib/api/model',
       client: 'svelte-query',
       httpClient: 'fetch',
-      mode: 'single'
+      mode: 'single',
+      override: {
+        mutator: {
+          path: 'apps/web/src/lib/api/fetcher.ts',
+          name: 'fetcher'
+        }
+      }
     }
   }
 }

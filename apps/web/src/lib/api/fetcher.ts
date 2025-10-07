@@ -1,0 +1,81 @@
+export type FetcherConfig<TVariables> = {
+  url: string;
+  method: string;
+  params?: Record<string, unknown>;
+  headers?: HeadersInit;
+  data?: TVariables;
+  signal?: AbortSignal;
+  baseURL?: string;
+};
+
+function buildUrl(url: string, params?: Record<string, unknown>, baseURL?: string) {
+  const searchParams = new URLSearchParams();
+  if (params) {
+    Object.entries(params).forEach(([key, value]) => {
+      if (value == null) return;
+      if (Array.isArray(value)) {
+        value.forEach((item) => searchParams.append(key, String(item)));
+      } else {
+        searchParams.append(key, String(value));
+      }
+    });
+  }
+
+  const hasBase =
+    baseURL && /^https?:/i.test(baseURL)
+      ? new URL(url, baseURL).toString()
+      : `${baseURL ?? ''}${url}`;
+
+  const queryString = searchParams.toString();
+  return queryString ? `${hasBase}?${queryString}` : hasBase;
+}
+
+export async function fetcher<TData, TVariables = unknown>(
+  config: FetcherConfig<TVariables>
+): Promise<TData> {
+  const { url, method, params, headers, data, signal, baseURL } = config;
+  const requestUrl = buildUrl(url, params, baseURL ?? '/api');
+
+  let body: BodyInit | undefined;
+  let resolvedHeaders: HeadersInit | undefined = headers;
+
+  if (data instanceof FormData || data instanceof URLSearchParams || data instanceof Blob) {
+    body = data as BodyInit;
+  } else if (data !== undefined) {
+    body = JSON.stringify(data);
+    resolvedHeaders = {
+      'Content-Type': 'application/json',
+      ...headers,
+    };
+  }
+
+  const response = await fetch(requestUrl, {
+    method,
+    headers: resolvedHeaders,
+    body,
+    signal,
+  });
+
+  const text = await response.text();
+  let parsed: TData | null = null;
+  if (text) {
+    try {
+      parsed = JSON.parse(text) as TData;
+    } catch {
+      parsed = null;
+    }
+  }
+
+  if (!response.ok) {
+    const error = new Error(`Request failed with status ${response.status}`);
+    (error as Error & { response?: Response }).response = response;
+    (error as Error & { body?: string }).body = text;
+    throw error;
+  }
+
+  if (parsed === null) {
+    throw new Error('Failed to parse response body');
+  }
+
+  return parsed;
+}

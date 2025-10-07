@@ -19,9 +19,7 @@
     }
   }
 
-  const searchMutation = createPostSearch({
-    fetch: { baseURL: '/api' },
-  });
+  const searchMutation = createPostSearch();
 
   const triggerSearch = async () => {
     if (get(searchMutation).isPending) return;

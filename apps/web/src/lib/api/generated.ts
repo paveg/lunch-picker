@@ -11,6 +11,7 @@ import type {
   MutationFunction,
 } from '@tanstack/svelte-query';
 import type { SearchRequest, SearchResponse } from './model';
+import { fetcher } from './fetcher';
 
 type AwaitedInput<T> = PromiseLike<T> | T;
 
@@ -19,62 +20,29 @@ type Awaited<O> = O extends AwaitedInput<infer T> ? T : never;
 /**
  * @summary Search for lunch spots
  */
-export const postSearch = (
-  searchRequest: SearchRequest,
-  options?: RequestInit & { baseURL?: string }
-): Promise<SearchResponse> => {
-  const { baseURL = '/api', headers, ...fetchOptions } = options ?? {};
-
-  return fetch(`${baseURL}/search`, {
+export const postSearch = (searchRequest: SearchRequest) => {
+  return fetcher<SearchResponse>({
+    url: `/search`,
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...headers,
-    },
-    body: JSON.stringify(searchRequest),
-    ...fetchOptions,
-  }).then(async (response) => {
-    const text = await response.text();
-    let data: SearchResponse | null = null;
-
-    if (text) {
-      try {
-        data = JSON.parse(text) as SearchResponse;
-      } catch {
-        data = null;
-      }
-    }
-
-    if (!response.ok) {
-      const error = new Error(`Failed to search (status ${response.status})`);
-      (error as Error & { response?: Response }).response = response;
-      (error as Error & { body?: string }).body = text;
-      throw error;
-    }
-
-    if (!data) {
-      throw new Error('Unexpected empty response body');
-    }
-
-    return data;
+    headers: { 'Content-Type': 'application/json' },
+    data: searchRequest,
   });
 };
 
-export const getPostSearchMutationOptions = <TError = Error, TContext = unknown>(options?: {
+export const getPostSearchMutationOptions = <TError = unknown, TContext = unknown>(options?: {
   mutation?: CreateMutationOptions<
     Awaited<ReturnType<typeof postSearch>>,
     TError,
     { data: SearchRequest },
     TContext
   >;
-  fetch?: RequestInit & { baseURL?: string };
 }): CreateMutationOptions<
   Awaited<ReturnType<typeof postSearch>>,
   TError,
   { data: SearchRequest },
   TContext
 > => {
-  const { mutation: mutationOptions, fetch: fetchOptions } = options ?? {};
+  const { mutation: mutationOptions } = options ?? {};
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof postSearch>>,
@@ -82,7 +50,7 @@ export const getPostSearchMutationOptions = <TError = Error, TContext = unknown>
   > = (props) => {
     const { data } = props ?? {};
 
-    return postSearch(data, fetchOptions);
+    return postSearch(data);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -90,19 +58,18 @@ export const getPostSearchMutationOptions = <TError = Error, TContext = unknown>
 
 export type PostSearchMutationResult = NonNullable<Awaited<ReturnType<typeof postSearch>>>;
 export type PostSearchMutationBody = SearchRequest;
-export type PostSearchMutationError = Error;
+export type PostSearchMutationError = unknown;
 
 /**
  * @summary Search for lunch spots
  */
-export const createPostSearch = <TError = Error, TContext = unknown>(options?: {
+export const createPostSearch = <TError = unknown, TContext = unknown>(options?: {
   mutation?: CreateMutationOptions<
     Awaited<ReturnType<typeof postSearch>>,
     TError,
     { data: SearchRequest },
     TContext
   >;
-  fetch?: RequestInit & { baseURL?: string };
 }): CreateMutationResult<
   Awaited<ReturnType<typeof postSearch>>,
   TError,
