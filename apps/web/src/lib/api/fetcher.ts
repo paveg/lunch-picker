@@ -1,4 +1,4 @@
-import { PUBLIC_API_BASE_URL } from '$env/static/public';
+import { env as publicEnv } from '$env/dynamic/public';
 
 export type FetcherConfig<TVariables> = {
   url: string;
@@ -29,7 +29,7 @@ function buildUrl(url: string, params?: Record<string, unknown>, baseURL?: strin
   return queryString ? `${hasBase}?${queryString}` : hasBase;
 }
 
-const DEFAULT_BASE_URL = PUBLIC_API_BASE_URL || '/api';
+const DEFAULT_BASE_URL = publicEnv.PUBLIC_API_BASE_URL || '/api';
 
 function mergeBaseAndPath(baseURL: string, path: string) {
   if (!/^https?:/i.test(baseURL)) {
