@@ -7,18 +7,23 @@ This project runs entirely on Cloudflare. The API lives in `apps/api` (Workers +
 ## 1. Prepare the API Worker (`apps/api`)
 
 1. Install dependencies and sign in to Cloudflare once:
+
    ```bash
    pnpm install
    pnpm --filter api exec wrangler login
    ```
+
 2. Create the persistent resources (run once per account):
+
    ```bash
    cd apps/api
    pnpm exec wrangler d1 create lunch-picker
    pnpm exec wrangler kv namespace create lunch-picker-cache
    ```
+
    Copy the resulting `database_id` and `namespace_id` from the output.
-3. Create `apps/api/wrangler.toml.local` (git-ignored) so Wrangler has the production identifiers:
+3. Copy `apps/api/wrangler.toml.local.example` to `apps/api/wrangler.toml.local` (git-ignored) so Wrangler has the production identifiers:
+
    ```toml
    [[d1_databases]]
    binding = "DB"
@@ -29,17 +34,22 @@ This project runs entirely on Cloudflare. The API lives in `apps/api` (Workers +
    binding = "CACHE"
    id = "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"
    ```
+
 4. Register secrets that must never appear in source control:
+
    ```bash
    cd apps/api
    pnpm exec wrangler secret put GOOGLE_PLACES_API_KEY
    ```
+
    Repeat for any additional secrets the Worker consumes. Local development continues to use `.dev.vars`.
 5. Deploy after validating locally with `pnpm --filter api dev`:
+
    ```bash
    cd apps/api
    pnpm exec wrangler deploy
    ```
+
    The command publishes the Worker to `https://lunch-picker-api.<account>.workers.dev` (or your custom route) with the configured D1 and KV bindings.
 
 ## 2. Configure Cloudflare Pages (`apps/web`)
@@ -68,6 +78,7 @@ If you do not have a custom domain yet, use the default Workers subdomain for AP
 1. Develop locally (`pnpm --filter api dev`, `pnpm --filter web dev`).
 2. Run checks (lint, tests) and open a pull request.
 3. After merging to `main`, deploy:
+
    ```bash
    # API
    cd apps/api
@@ -76,6 +87,7 @@ If you do not have a custom domain yet, use the default Workers subdomain for AP
    # Web
    # Triggered automatically by Pages on new commits to main
    ```
+
 4. Smoke-test the production URLs (Pages + Worker route) before announcing changes.
 
 Keep this document updated whenever the deployment process changes (e.g. new secrets, additional services).
