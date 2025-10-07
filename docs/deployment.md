@@ -69,17 +69,17 @@ This project runs entirely on Cloudflare. The API lives in `apps/api` (Workers +
    - **Package manager:** pnpm (set `PNPM_VERSION` and optionally `NODE_VERSION=20` in the Pages _Environment variables_ section)
    - **Pages Functions:** Keep enabled (the SvelteKit adapter outputs a Worker under `.svelte-kit/cloudflare`)
 3. Configure deployment branches. Using `main` keeps production automatic; preview deployments are available for pull requests.
-4. Add any environment variables the web app needs (for example, an API base URL if you later externalise it). Do **not** expose sensitive keys directly to the client.
+4. Add any environment variables the web app needs.最低限 `PUBLIC_API_BASE_URL=https://lunch-picker-api.<account>.workers.dev` を Production / Preview ともに設定しておくと、フロントから Workers ドメインへフェッチできます（ローカル開発では `.env` に同じ値を入れる）。Do **not** expose sensitive keys directly to the client.
 
-## 3. Route `/api` traffic to the Worker
+## 3. Route `/api` traffic to the Worker（任意）
 
-The web app calls the API through the same origin (`/api/...`). After assigning a custom domain to the Pages project, add a Worker Route so requests hit the production Worker:
+同一ドメインで完結させたい場合は、独自ドメインを Cloudflare に登録したうえで以下のルート設定を行います。
 
-1. In the Cloudflare dashboard, open **Workers & Pages → Workers → lunch-picker-api → Triggers**.
-2. Add a route such as `https://your-domain.example/api/*` and point it to `lunch-picker-api`.
-3. Verify that `https://your-domain.example/api/health` (or another endpoint) reaches the Worker. Requests from the web UI should now stay same-origin and respect KV/D1 bindings.
+1. Cloudflare ダッシュボードで **Workers & Pages → Workers → lunch-picker-api → Triggers** を開く。
+2. `https://your-domain.example/api/*` のようにルートを追加し、Worker として `lunch-picker-api` を紐付ける。
+3. `https://your-domain.example/api/health` などが Worker に到達することを確認する。
 
-If you do not have a custom domain yet, use the default Workers subdomain for API calls during development. Update the web client configuration accordingly before shipping.
+独自ドメインを持たない場合は、この手順をスキップし、`PUBLIC_API_BASE_URL` を Workers の既定ドメイン（例: `https://lunch-picker-api.pavegy.workers.dev`）に向けることで運用できます。
 
 ## 4. Production deployment flow
 
