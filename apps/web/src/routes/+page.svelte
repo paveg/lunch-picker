@@ -51,6 +51,14 @@
     e.preventDefault();
     triggerSearch();
   }
+
+  // Calculate walking time in minutes (average walking speed: 80m/min or 4.8km/h)
+  function calculateWalkTime(distanceMeters: number): { oneWay: number; roundTrip: number } {
+    const walkingSpeedMPerMin = 80;
+    const oneWay = Math.ceil(distanceMeters / walkingSpeedMPerMin);
+    const roundTrip = oneWay * 2;
+    return { oneWay, roundTrip };
+  }
 </script>
 
 <main class="max-w-3xl mx-auto p-4 space-y-4">
@@ -113,7 +121,7 @@
       <p class="text-sm text-gray-500">検索中…</p>
     {:else if $searchMutation.isSuccess && $searchMutation.data?.results?.length}
       <div class="space-y-3" role="region" aria-label="検索結果">
-        {#each $searchMutation.data?.results ?? [] as r, index}
+        {#each $searchMutation.data?.results ?? [] as r}
           <article class="bg-white rounded-2xl p-4 shadow-sm">
             <div class="flex justify-between items-start gap-4">
               <div class="flex-1 min-w-0">
@@ -121,7 +129,14 @@
                 <p class="text-sm text-gray-600 mt-1">
                   <span aria-label="評価">★{r.rating ?? '-'}</span>
                   <span aria-hidden="true">・</span>
-                  <span aria-label="距離">{Math.round(r.distance_m)}m</span>
+                  <span aria-label="距離と移動時間">
+                    {Math.round(r.distance_m)}m (徒歩
+                    {#if calculateWalkTime(r.distance_m).roundTrip >= 60}
+                      約{Math.round(calculateWalkTime(r.distance_m).roundTrip / 60)}時間
+                    {:else}
+                      {calculateWalkTime(r.distance_m).oneWay}分
+                    {/if}、往復{calculateWalkTime(r.distance_m).roundTrip}分)
+                  </span>
                   <span aria-hidden="true">・</span>
                   <span aria-label="価格">価格:{r.price_level ?? '-'}</span>
                   {#if r.open_now !== null}
