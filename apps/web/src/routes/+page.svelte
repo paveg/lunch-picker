@@ -74,6 +74,9 @@
               <h2 class="font-semibold">{r.name}</h2>
               <p class="text-xs text-gray-500">
                 ★{r.rating ?? '-'}・{Math.round(r.distance_m)}m・価格:{r.price_level ?? '-'}
+                {#if r.open_now !== null}
+                  ・{r.open_now ? '営業中' : '営業時間外'}
+                {/if}
               </p>
             </div>
             <a href={r.gmaps_url} target="_blank" class="text-xs underline">Google Maps</a>
