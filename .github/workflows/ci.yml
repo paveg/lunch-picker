@@ -34,7 +34,7 @@ jobs:
         run: pnpm lint
 
       - name: Run tests
-        run: pnpm --filter api test --run
+        run: pnpm --filter api test -- --run
 
       - name: Build web app
         run: pnpm --filter web build
