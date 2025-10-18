@@ -70,6 +70,8 @@ components:
         - gmaps_url
         - distance_m
         - static_map_url
+        - fit_score
+        - types
       properties:
         place_id:
           type: string
@@ -102,6 +104,9 @@ components:
             type: string
     SearchResponse:
       type: object
+      required:
+        - results
+        - cachedAt
       properties:
         results:
           type: array
