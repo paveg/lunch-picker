@@ -14,6 +14,15 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/SearchRequest'
+            example:
+              location:
+                lat: 35.681236
+                lng: 139.767125
+              radius_m: 1000
+              cuisine: ['ラーメン', 'カレー']
+              budget:
+                max: 1500
+              limit: 5
       responses:
         '200':
           description: List of restaurants
@@ -21,6 +30,31 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SearchResponse'
+              example:
+                results:
+                  - place_id: ChIJ51cu8IcbXWARiRtXIothAS4
+                    name: シャングリ・ラ 東京
+                    rating: 4.5
+                    distance_m: 243
+                    price_level: PRICE_LEVEL_EXPENSIVE
+                    open_now: true
+                    fit_score: 0.874
+                    static_map_url: /api/maps/static?lat=35.679722&lng=139.765833&placeId=ChIJ51cu8IcbXWARiRtXIothAS4
+                    gmaps_url: https://www.google.com/maps/search/?api=1&query=35.679722,139.765833
+                    address: 東京都千代田区丸の内1-8-3
+                    types: ['restaurant', 'food', 'point_of_interest', 'establishment']
+                  - place_id: ChIJRYKKxLcRGGARoITz9yDB0Ns
+                    name: 東京ラーメンストリート
+                    rating: 4.2
+                    distance_m: 520
+                    price_level: PRICE_LEVEL_MODERATE
+                    open_now: false
+                    fit_score: 0.756
+                    static_map_url: /api/maps/static?lat=35.681944&lng=139.767222&placeId=ChIJRYKKxLcRGGARoITz9yDB0Ns
+                    gmaps_url: https://maps.google.com/?cid=15544893621850219168
+                    address: 東京都千代田区丸の内1-9-1
+                    types: ['restaurant', 'food', 'point_of_interest', 'establishment']
+                cachedAt: 1729267200000
 components:
   schemas:
     Coordinates:
