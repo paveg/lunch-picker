@@ -73,11 +73,11 @@
         id="radius"
         type="range"
         min="300"
-        max="3000"
+        max="1200"
         step="100"
         bind:value={radius}
         aria-valuemin="300"
-        aria-valuemax="3000"
+        aria-valuemax="1200"
         aria-valuenow={radius}
         aria-label="検索範囲（メートル）"
         class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
